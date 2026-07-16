@@ -1,6 +1,21 @@
 # Deploy Farm Manager for mobile use
 
-Farm Manager is a static, offline-first PWA. The frontend needs an HTTPS static host; no application server is required unless optional multi-device synchronization is enabled.
+Farm Manager is an offline-first PWA with Firebase Authentication and Cloud Firestore synchronization.
+
+## Recommended: Firebase Hosting and Firestore
+
+The repository is connected to Firebase project `farm-management-1` through `.firebaserc`.
+
+Current production URL: **https://farm-management-1.web.app**
+
+1. In Firebase Authentication, enable Email/Password and create the farm user.
+2. Create the default Firestore database in production mode, preferably in `asia-south1` (Mumbai).
+3. Run `npm.cmd install`, `npm.cmd test`, and `npm.cmd run build`.
+4. Authenticate the Firebase CLI with `npx.cmd firebase-tools login`.
+5. Deploy the database rules and PWA with `npx.cmd firebase-tools deploy --only firestore:rules,hosting`.
+6. Open the resulting `web.app` URL and sign into synchronization from Settings.
+
+The rules restrict each user's records to that Firebase Authentication UID and prohibit hard deletion. No Cloud Functions or Blaze billing plan is required.
 
 ## Recommended: GitHub Pages
 
@@ -23,6 +38,6 @@ Open the installed app once while online so its offline files are cached. Farm r
 
 Push changes to `main`. GitHub Pages redeploys automatically. Reopen the app while online to receive the new application files; local farm records remain in IndexedDB.
 
-## Optional synchronization
+## Automatic synchronization
 
-The static site does not automatically synchronize data between phones or browsers. To enable that, separately deploy `sync_server/` behind HTTPS, set `SYNC_ALLOWED_ORIGIN` to the exact Pages URL, use a long unique `SYNC_TOKEN`, and configure the URL and token under **Settings → Optional device synchronization**.
+Sign into the same Firebase account on each installation. Saves remain local and immediate, then synchronize automatically after edits, at startup, when the network returns, every five minutes while open, and through Firestore's real-time listener. Mobile operating systems can suspend a fully closed PWA, so any pending synchronization resumes the next time it opens.

@@ -1,5 +1,7 @@
 # Mixed Farm Manager
 
+Live application: **https://farm-management-1.web.app**
+
 An installable, offline-first mixed-farm management PWA implementing Phases One–Three from `farm-manager-spec.md`.
 
 ## Run locally
@@ -20,7 +22,7 @@ npm.cmd run build
 
 Production files are generated in `dist/`. Serve that folder over HTTPS (or localhost) to enable installation and the service worker.
 
-For a phone-ready HTTPS deployment, follow [`DEPLOYMENT.md`](DEPLOYMENT.md). A GitHub Pages workflow is included, and the generated PWA also works when hosted below a project path.
+For a phone-ready HTTPS deployment, follow [`DEPLOYMENT.md`](DEPLOYMENT.md). Firebase Hosting is the primary deployment; a GitHub Pages workflow is also included.
 
 ## Implemented coverage
 
@@ -43,12 +45,14 @@ For a phone-ready HTTPS deployment, follow [`DEPLOYMENT.md`](DEPLOYMENT.md). A G
 - Comprehensive normalized ML training CSV covering finance, labour, poultry, feed, livestock, crops, weather and market predictors/outcomes
 - Validated multi-sheet Excel re-import with enum, numeric, date, allocation, duplicate-tag and referential checks plus transactional writes
 - Optional hashed startup PIN, shared correction/archive history, persistent alert snooze/dismiss, consolidated trend view, and land-overlap/capacity safeguards
-- Optional authenticated multi-device synchronization through the included SQLite service, with incremental cursors, deterministic conflict handling, and soft-delete propagation
+- Authenticated automatic multi-device synchronization through Firebase Authentication and Cloud Firestore, with deterministic conflict handling and soft-delete propagation
 
 Online weather uses configured coordinates (Bengaluru defaults) and needs no API key. Market fetching requires the user's data.gov.in API key under **Insights & Market → Online data settings**; the current Agmarknet resource ID is prefilled, and optional state, district, and nearby-market filters narrow the daily feed. Manual weather and market entry remain available offline. **Corrections & Archive** provides soft-delete and restore across record types; permanent deletion is intentionally unavailable because the specification requires full historical and linked-report integrity.
 
-## Optional synchronization
+## Automatic Firebase synchronization
 
-Synchronization is opt-in and does not change the offline-first behavior. Run the service described in [`sync_server/README.md`](sync_server/README.md), then save its HTTPS URL and bearer token under **Settings → Optional device synchronization**. Press **Sync now** on each installation whenever records should be exchanged.
+Enable Email/Password Authentication and create the Firestore database in the configured Firebase project. Deploy `firestore.rules`, then sign into the same Firebase user under **Settings → Automatic device synchronization** on every installation. The app reconciles records after saves, at startup, when connectivity returns, and every five minutes while it is open. Firestore listeners deliver remote changes in real time.
 
-Only farm data records synchronize. Local settings—including the bearer token and app PIN—remain on the device. Continue making regular `.farmbackup` files; synchronization is not a backup replacement.
+Only farm data records synchronize. Local settings—including the app PIN—remain on the device. Records remain usable offline in IndexedDB, and queued local changes are uploaded after reconnection. Continue making regular `.farmbackup` files because synchronization is not a backup replacement.
+
+The earlier standalone SQLite synchronization service remains under `sync_server/` for self-hosted or migration use, but it is not required for the Firebase deployment.

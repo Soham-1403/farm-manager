@@ -13,3 +13,6 @@ __pycache__/
 .pytest_cache/
 *.pyc
 *.tsbuildinfo
+.firebase/
+firebase-debug.log
+pglite-debug.log

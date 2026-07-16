@@ -9,6 +9,7 @@ import { AllocationBreakdown, DetailedReporting } from './reporting-tools';
 import { SyncPanel } from './sync-tools';
 import { sharedSplitDefault } from './allocation-defaults';
 import { SampleFarmPanel } from './sample-tools';
+import { requestFirebaseSync, startFirebaseAutoSync } from './firebase-sync';
 
 type Page = 'home'|'poultry'|'feed'|'livestock'|'land'|'crops'|'intelligence'|'finance'|'labour'|'enterprises'|'core'|'alerts'|'reports'|'settings';
 type Loaded = FarmData & AdvancedData & { workers: Worker[]; settings: AppSetting[] };
@@ -75,9 +76,10 @@ function installFieldEnhancements(data:Loaded){
 export default function App(){
   const [page,setPage]=useState<Page>('home'); const [data,setData]=useState<Loaded>(emptyData); const [loading,setLoading]=useState(true); const [notice,setNotice]=useState('');
   const refresh=async()=>{setData(await loadAll());setLoading(false)};
+  useEffect(()=>startFirebaseAutoSync(refresh),[]);
   useEffect(()=>{let cancelled=false;const run=async()=>{const loaded=await loadAll();if(cancelled)return;setData(loaded);setLoading(false);if(await refreshDailyOnlineData(loaded)){if(!cancelled)setData(await loadAll())}};run();const timer=window.setInterval(run,60*60*1000);return()=>{cancelled=true;window.clearInterval(timer)}},[]);
   useEffect(()=>installFieldEnhancements(data),[data,page]);
-  const act=async(fn:()=>Promise<unknown>,message='Saved')=>{try{await fn();await refresh();setNotice(message);setTimeout(()=>setNotice(''),2600);return true}catch(e){setNotice(e instanceof Error?e.message:'Could not save');return false}};
+  const act=async(fn:()=>Promise<unknown>,message='Saved')=>{try{await fn();await refresh();requestFirebaseSync();setNotice(message);setTimeout(()=>setNotice(''),2600);return true}catch(e){setNotice(e instanceof Error?e.message:'Could not save');return false}};
   if(loading)return <div className="splash"><span>🌾</span><p>Opening your farm…</p></div>;
   const nav:[Page,string,string][]=[['home','Overview','⌂'],['poultry','Poultry','◉'],['feed','Feed','◌'],['livestock','Goats & Sheep','♞'],['crops','Crops','♧'],['land','Farm & Land','◇'],['intelligence','Insights & Market','✦'],['finance','Finance','₹'],['labour','Labour','♟'],['enterprises','Enterprises','◆'],['core','Corrections & Archive','☷'],['alerts','Alerts','!'],['reports','Reports','▥'],['settings','Settings','⚙']];
   return <PinGate settings={data.settings}><div className="app"><aside><div className="brand"><div className="brandmark">FM</div><div><b>Mixed Farm</b><small>Manager</small></div></div><nav>{nav.map(([key,label,icon])=><button className={page===key?'active':''} onClick={()=>setPage(key)} key={key}><span>{icon}</span>{label}</button>)}</nav><div className="offline">● Offline-ready</div></aside><main><header><div><small>BENGALURU · INDIA</small><h1>{nav.find(x=>x[0]===page)?.[1]}</h1></div><div className="date">{displayDate(today())}</div></header>{notice&&<div className="toast">{notice}</div>}{page==='home'&&<Dashboard data={data} go={setPage}/>} {page==='poultry'&&<Poultry data={data} act={act}/>} {page==='finance'&&<Finance data={data} act={act}/>} {page==='labour'&&<Labour data={data} act={act}/>} {page==='enterprises'&&<Enterprises data={data} act={act}/>} {page==='reports'&&<><Reports data={data}/><CoreTrends data={data}/></>} {(['feed','livestock','land','crops','intelligence'] as Page[]).includes(page)&&<AdvancedHub section={page as 'feed'|'livestock'|'land'|'crops'|'intelligence'} data={data} act={act}/>} {page==='core'&&<CoreRecords data={data} act={act}/>} {page==='alerts'&&<AlertCenter data={data} act={act}/>} {page==='settings'&&<Settings data={data} act={act}/>}</main><div className="mobileNav">{nav.map(([key,label,icon])=><button className={page===key?'active':''} onClick={()=>setPage(key)} key={key}><span>{icon}</span><small>{label}</small></button>)}</div></div></PinGate>
